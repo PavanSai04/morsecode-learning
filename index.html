@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morse Code Learning</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Morse Code Learning</h1>
+            <p class="subtitle">Learn and practice Morse code translations</p>
+        </header>
+
+        <div class="card converter-section">
+            <h2>Text to Morse Converter</h2>
+            <div class="input-group">
+                <input type="text" id="morseInput" placeholder="Enter text to convert to Morse" autocomplete="off">
+                <button id="convertButton" class="primary-btn">Convert</button>
+            </div>
+            <div class="morse-result">
+                <div id="morseDisplay" class="morse-display"></div>
+                <button id="playButton" class="secondary-btn" disabled>
+                    <span class="icon">♫</span> Play Sound
+                </button>
+            </div>
+        </div>
+
+        <div class="card practice-section">
+            <h2>Practice Morse Code</h2>
+            <div class="practice-container">
+                <div class="practice-question">
+                    <h3>What character does this represent?</h3>
+                    <p id="practiceText" class="morse-code">...</p>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="userInput" placeholder="Your translation" maxlength="1" autocomplete="off">
+                    <button id="checkButton" class="primary-btn">Check Answer</button>
+                </div>
+                <p id="result" class="result-message"></p>
+                <div class="score-container">
+                    <p>Score: <span id="score">0</span></p>
+                    <button id="newQuestionButton" class="secondary-btn">New Question</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card reference-section">
+            <h2>Morse Code Reference</h2>
+            <div class="reference-grid" id="referenceGrid">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+
+        <footer>
+            <p>Developed for learning Morse code communications | <span id="currentYear"></span></p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
