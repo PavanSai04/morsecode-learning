@@ -1,5 +1,5 @@
-// Morse Code Dictionary
-const morseCode = {
+// Morse code mappings
+const morseCodeMap = {
     'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.', 'F': '..-.',
     'G': '--.', 'H': '....', 'I': '..', 'J': '.---', 'K': '-.-', 'L': '.-..',
     'M': '--', 'N': '-.', 'O': '---', 'P': '.--.', 'Q': '--.-', 'R': '.-.',
@@ -10,213 +10,171 @@ const morseCode = {
     ',': '--..--', '.': '.-.-.-', '?': '..--..', '/': '-..-.', '-': '-....-',
     '(': '-.--.', ')': '-.--.-', ' ': '/'
 };
-
-// Create Reverse Morse Code Dictionary
-const reverseMorseCode = {};
-for (const char in morseCode) {
-    reverseMorseCode[morseCode[char]] = char;
-}
+const reverseMorseCodeMap = Object.fromEntries(
+    Object.entries(morseCodeMap).map(([k, v]) => [v, k])
+);
 
 // DOM Elements
-const morseInput = document.getElementById('morseInput');
-const morseDisplay = document.getElementById('morseDisplay');
-const convertButton = document.getElementById('convertButton');
-const playButton = document.getElementById('playButton');
+const textInput = document.querySelectorAll('#morseInput')[0];
+const morseOutput = document.querySelectorAll('#morseDisplay')[0];
+const convertBtn = document.querySelectorAll('#convertButton')[0];
+const playBtn = document.getElementById('playButton');
+const stopBtn = document.getElementById('stopButton');
+
+// Morse to Text Section
+const morseToTextInput = document.querySelectorAll('#morseInput')[1];
+const morseToTextOutput = document.querySelectorAll('#morseDisplay')[1];
+const morseToTextConvertBtn = document.querySelectorAll('#convertButton')[1];
+
+// Practice Section
 const practiceText = document.getElementById('practiceText');
 const userInput = document.getElementById('userInput');
 const checkButton = document.getElementById('checkButton');
 const resultMessage = document.getElementById('result');
 const scoreDisplay = document.getElementById('score');
 const newQuestionButton = document.getElementById('newQuestionButton');
-const referenceGrid = document.getElementById('referenceGrid');
-const currentYear = document.getElementById('currentYear');
 
-// Game state
-let currentMorse = '';
-let currentText = '';
 let score = 0;
+let currentChar = "";
 
-// Audio context for Morse code sounds
-let audioContext = null;
-
-// Initialize audio context on user interaction
-function initAudio() {
-    if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+// Text to Morse conversion
+convertBtn.addEventListener('click', () => {
+    const text = textInput.value.toUpperCase();
+    const morse = [...text].map(char => morseCodeMap[char] || '').join(' ');
+    morseOutput.textContent = morse;
+    if (morse.trim()) {
+        playBtn.disabled = false;
+        stopBtn.disabled = false;
     }
-}
+});
 
-// Convert text to Morse code
-function convertToMorse() {
-    const text = morseInput.value.toUpperCase();
-    let morse = '';
-    
-    for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        if (morseCode[char]) {
-            morse += morseCode[char] + ' ';
-        } else if (char === ' ') {
-            morse += '/ ';
+// Morse to Text conversion
+morseToTextConvertBtn.addEventListener('click', () => {
+    const morse = morseToTextInput.value.trim().split(' ');
+    const text = morse.map(code => reverseMorseCodeMap[code] || '').join('');
+    morseToTextOutput.textContent = text;
+});
+
+// Audio playback logic
+let audioCtx;
+
+function playMorseCode(morse) {
+    if (!morse) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const dotDuration = 200; // ms
+    let time = audioCtx.currentTime;
+
+    morse.split('').forEach(symbol => {
+        if (symbol === '.' || symbol === '-') {
+            const duration = symbol === '.' ? dotDuration : dotDuration * 3;
+            scheduleBeep(time, duration);
+            time += duration / 1000 + 0.1;
+        } else {
+            time += 0.2;
         }
-    }
-    
-    morseDisplay.textContent = morse.trim();
-    playButton.disabled = morse.trim() === '';
+    });
+
+    setTimeout(() => {
+        if (audioCtx && audioCtx.state !== 'closed') audioCtx.close();
+    }, (time - audioCtx.currentTime) * 1000 + 500);
 }
 
-// Play Morse code as audio
-function playMorseCode() {
-    initAudio();
-    
-    const morse = morseDisplay.textContent;
-    const dotDuration = 100; // milliseconds
-    const dashDuration = dotDuration * 3;
-    const pauseBetweenSymbols = dotDuration;
-    const pauseBetweenLetters = dotDuration * 3;
-    const pauseBetweenWords = dotDuration * 7;
-    
-    let currentTime = audioContext.currentTime;
-    
-    // Process the Morse code
-    for (let i = 0; i < morse.length; i++) {
-        const symbol = morse[i];
-        
-        if (symbol === '.') {
-            playTone(currentTime, dotDuration);
-            currentTime += dotDuration / 1000 + pauseBetweenSymbols / 1000;
-        } else if (symbol === '-') {
-            playTone(currentTime, dashDuration);
-            currentTime += dashDuration / 1000 + pauseBetweenSymbols / 1000;
-        } else if (symbol === ' ') {
-            currentTime += pauseBetweenLetters / 1000;
-        } else if (symbol === '/') {
-            currentTime += pauseBetweenWords / 1000;
-        }
-    }
-}
-
-// Play a tone at the specified time for the specified duration
-function playTone(startTime, duration) {
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    
-    oscillator.type = 'sine';
-    oscillator.frequency.value = 700; // Hz
-    
-    gainNode.gain.setValueAtTime(0.5, startTime);
-    
+function scheduleBeep(startTime, duration) {
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
     oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
+    gainNode.connect(audioCtx.destination);
+    oscillator.frequency.value = 600;
     oscillator.start(startTime);
     oscillator.stop(startTime + duration / 1000);
 }
 
-// Generate a new practice question
-function generatePractice() {
-    // Use only letters and numbers for practice
-    const characterSet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    const randomChar = characterSet[Math.floor(Math.random() * characterSet.length)];
-    
-    currentText = randomChar;
-    currentMorse = morseCode[randomChar];
-    
-    practiceText.textContent = currentMorse;
+playBtn.addEventListener('click', () => {
+    const morse = morseOutput.textContent;
+    playMorseCode(morse);
+});
+
+stopBtn.addEventListener('click', () => {
+    if (audioCtx && audioCtx.state !== 'closed') {
+        audioCtx.close();
+        playBtn.disabled = true;
+        stopBtn.disabled = true;
+    }
+});
+
+// Practice mode logic
+function getRandomChar() {
+    const keys = Object.keys(morseCodeMap).filter(k => k !== ' ');
+    return keys[Math.floor(Math.random() * keys.length)];
+}
+
+function newQuestion() {
+    currentChar = getRandomChar();
+    practiceText.textContent = morseCodeMap[currentChar];
     userInput.value = '';
     resultMessage.textContent = '';
-    resultMessage.className = 'result-message';
 }
 
-// Check the user's answer
-function checkAnswer() {
-    const userAnswer = userInput.value.toUpperCase();
-    
-    if (userAnswer === currentText) {
-        resultMessage.textContent = 'Correct! Well done!';
-        resultMessage.className = 'result-message correct';
+checkButton.addEventListener('click', () => {
+    const answer = userInput.value.toUpperCase();
+    if (answer === currentChar) {
         score++;
-        scoreDisplay.textContent = score;
-        
-        // Generate a new question after a brief delay
-        setTimeout(generatePractice, 1500);
+        resultMessage.textContent = "Correct!";
+        resultMessage.style.color = "green";
     } else {
-        resultMessage.textContent = `Incorrect. The answer is: ${currentText}`;
-        resultMessage.className = 'result-message incorrect';
+        resultMessage.textContent = `Wrong. It was ${currentChar}`;
+        resultMessage.style.color = "red";
     }
-}
+    scoreDisplay.textContent = score;
+});
 
-// Create Morse code reference grid
+newQuestionButton.addEventListener('click', newQuestion);
+
+// Reference Table
 function createReferenceGrid() {
+    const referenceGrid = document.getElementById('referenceGrid');
     let html = '';
-    
-    // First add letters
+
     for (let i = 65; i <= 90; i++) {
         const char = String.fromCharCode(i);
         html += `
             <div class="reference-item">
                 <div class="reference-char">${char}</div>
-                <div class="reference-morse">${morseCode[char]}</div>
+                <div class="reference-morse">${morseCodeMap[char]}</div>
             </div>
         `;
     }
-    
-    // Then add numbers
+
     for (let i = 0; i <= 9; i++) {
         html += `
             <div class="reference-item">
                 <div class="reference-char">${i}</div>
-                <div class="reference-morse">${morseCode[i.toString()]}</div>
+                <div class="reference-morse">${morseCodeMap[i.toString()]}</div>
             </div>
         `;
     }
-    
-    // Add special characters
+
     const specialChars = [',', '.', '?', '/', '-', '(', ')', ' '];
     const specialDisplayNames = [',', '.', '?', '/', '-', '(', ')', 'space'];
-    
+
     for (let i = 0; i < specialChars.length; i++) {
-        html += `
-            <div class="reference-item">
-                <div class="reference-char">${specialDisplayNames[i]}</div>
-                <div class="reference-morse">${morseCode[specialChars[i]]}</div>
-            </div>
-        `;
+        const code = morseCodeMap[specialChars[i]];
+        if (code) {
+            html += `
+                <div class="reference-item">
+                    <div class="reference-char">${specialDisplayNames[i]}</div>
+                    <div class="reference-morse">${code}</div>
+                </div>
+            `;
+        }
     }
-    
+
     referenceGrid.innerHTML = html;
 }
 
-// Set the current year in the footer
-function setCurrentYear() {
-    const date = new Date();
-    currentYear.textContent = date.getFullYear();
-}
+// Footer year update
+document.getElementById('currentYear').textContent = new Date().getFullYear();
 
-// Event Listeners
-convertButton.addEventListener('click', convertToMorse);
-morseInput.addEventListener('keyup', function(event) {
-    if (event.key === 'Enter') {
-        convertToMorse();
-    }
-});
-
-playButton.addEventListener('click', playMorseCode);
-
-checkButton.addEventListener('click', checkAnswer);
-userInput.addEventListener('keyup', function(event) {
-    if (event.key === 'Enter') {
-        checkAnswer();
-    }
-});
-
-newQuestionButton.addEventListener('click', generatePractice);
-
-// Initialize the app
-function init() {
-    createReferenceGrid();
-    generatePractice();
-    setCurrentYear();
-}
-
-// Initialize on page load
-window.addEventListener('DOMContentLoaded', init);
+// Initialize
+newQuestion();
+createReferenceGrid();
